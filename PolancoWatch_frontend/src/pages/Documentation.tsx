@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, Cpu, Activity, HardDrive, Network, Terminal, Settings, Info } from 'lucide-react';
+import { ChevronLeft, Cpu, Activity, HardDrive, Network, Terminal, Settings, Info, Cloud } from 'lucide-react';
 
 export default function Documentation() {
     const navigate = useNavigate();
@@ -195,6 +195,76 @@ export default function Documentation() {
                             </ul>
                         </section>
                     </div>
+
+                    {/* Google Drive Integration Section */}
+                    <section className="glass-panel rounded-4xl p-10 border-white/5 bg-gradient-to-br from-brand-secondary/5 to-transparent">
+                        <div className="flex items-start gap-6 mb-8">
+                            <div className="w-14 h-14 rounded-2xl bg-brand-secondary/10 border border-brand-secondary/20 flex items-center justify-center text-brand-secondary">
+                                <Cloud size={28} />
+                            </div>
+                            <div>
+                                <h2 className="text-2xl font-black text-white tracking-tight uppercase">Google Drive Integration</h2>
+                                <p className="text-slate-400 text-sm mt-1">Automated Cloud Backups Setup</p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-6">
+                            <div className="flex gap-4">
+                                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-brand-secondary/20 flex items-center justify-center text-brand-secondary font-black text-xs border border-brand-secondary/30">1</div>
+                                <div>
+                                    <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-2">Create Google Cloud Project</h3>
+                                    <p className="text-xs text-slate-400 leading-relaxed">
+                                        Go to the <a href="https://console.cloud.google.com" target="_blank" rel="noreferrer" className="text-brand-secondary hover:underline">Google Cloud Console</a>. Create a new project, then navigate to <strong className="text-white">APIs & Services &gt; Library</strong> and enable the <strong className="text-white">Google Drive API</strong>.
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            <div className="flex gap-4">
+                                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-brand-secondary/20 flex items-center justify-center text-brand-secondary font-black text-xs border border-brand-secondary/30">2</div>
+                                <div>
+                                    <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-2">Configure OAuth Consent Screen</h3>
+                                    <p className="text-xs text-slate-400 leading-relaxed">
+                                        Go to <strong className="text-white">OAuth consent screen</strong>. Set User Type to <strong className="text-white">External</strong> (or Internal if using Google Workspace). Fill in the required app details. Add your email as a Test User if your publishing status is "Testing".
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-4">
+                                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-brand-secondary/20 flex items-center justify-center text-brand-secondary font-black text-xs border border-brand-secondary/30">3</div>
+                                <div>
+                                    <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-2">Generate Credentials</h3>
+                                    <p className="text-xs text-slate-400 leading-relaxed">
+                                        Go to <strong className="text-white">Credentials &gt; Create Credentials &gt; OAuth client ID</strong>. Choose <strong className="text-white">Web application</strong>. Under "Authorized redirect URIs", add: <code className="text-brand-secondary font-mono text-[10px] bg-white/5 px-1 py-0.5 rounded ml-1">http://your-domain.com/api/backups/drive/callback</code> (replace with your actual domain/port).
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-4">
+                                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-brand-secondary/20 flex items-center justify-center text-brand-secondary font-black text-xs border border-brand-secondary/30">4</div>
+                                <div>
+                                    <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-2">Update Environment Variables</h3>
+                                    <p className="text-xs text-slate-400 leading-relaxed">
+                                        Copy the Client ID and Client Secret generated by Google. Add them to your <code className="text-brand-secondary font-mono text-[10px] bg-white/5 px-1 py-0.5 rounded">.env</code> file for the backend container:
+                                    </p>
+                                    <div className="bg-obsidian-950 rounded-xl p-4 mt-2 border border-white/5 font-mono text-[10px] text-slate-300">
+                                        <span className="text-brand-primary">GOOGLE_DRIVE_CLIENT_ID</span>=your-client-id.apps.googleusercontent.com<br/>
+                                        <span className="text-brand-primary">GOOGLE_DRIVE_CLIENT_SECRET</span>=your-client-secret<br/>
+                                        <span className="text-brand-primary">GOOGLE_DRIVE_REDIRECT_URI</span>=http://localhost:5246/api/backups/drive/callback
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-4">
+                                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-brand-secondary/20 flex items-center justify-center text-brand-secondary font-black text-xs border border-brand-secondary/30">5</div>
+                                <div>
+                                    <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-2">Link Account</h3>
+                                    <p className="text-xs text-slate-400 leading-relaxed">
+                                        Restart your Docker containers to load the new env vars. Go to the <strong className="text-white">Backups</strong> tab in PolancoWatch, click <strong className="text-white">Connect Google Drive</strong>, and authorize the application.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
 
                     {/* Infrastructure Footer */}
                     <footer className="pt-16 border-t border-white/5 text-center">

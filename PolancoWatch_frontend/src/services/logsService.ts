@@ -8,6 +8,7 @@ class LogsService {
   private connection: signalR.HubConnection | null = null;
   private currentContainerId: string | null = null;
   private logListener: ((log: string) => void) | null = null;
+  private isConnecting: boolean = false;
 
   public async startLogs(containerId: string, onLogReceived: (log: string) => void) {
     // If already watching this container, just update the listener
@@ -15,6 +16,9 @@ class LogsService {
       this.logListener = onLogReceived;
       return;
     }
+
+    if (this.isConnecting) return;
+    this.isConnecting = true;
 
     // Stop previous connection if any
     await this.stopLogs();
@@ -24,7 +28,7 @@ class LogsService {
 
     this.connection = new signalR.HubConnectionBuilder()
       .withUrl(LOGS_HUB_URL, {
-        accessTokenFactory: () => localStorage.getItem('token') || ""
+        withCredentials: true
       })
       .withAutomaticReconnect()
       .configureLogging(signalR.LogLevel.Warning)
@@ -42,11 +46,17 @@ class LogsService {
       
       // Request logs for the specific container
       await this.connection.invoke("GetContainerLogs", containerId);
-    } catch (err) {
+    } catch (err: any) {
+      if (err.message && err.message.includes("Invocation canceled")) {
+        console.warn("LogsHub connection canceled (React Strict Mode).");
+        return;
+      }
       console.error("Error connecting to LogsHub:", err);
       // Notify listener of error
       onLogReceived(`Error connecting to logs: ${err instanceof Error ? err.message : String(err)}`);
       throw err;
+    } finally {
+      this.isConnecting = false;
     }
   }
 

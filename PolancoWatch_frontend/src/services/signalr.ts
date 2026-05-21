@@ -15,7 +15,7 @@ class SignalRService {
 
     this.connection = new signalR.HubConnectionBuilder()
       .withUrl(HUB_URL, {
-        accessTokenFactory: () => localStorage.getItem('token') || ""
+        withCredentials: true
       })
       .withAutomaticReconnect([0, 2000, 10000, 30000])
       .configureLogging(signalR.LogLevel.Warning)

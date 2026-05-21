@@ -13,7 +13,7 @@ class BackupSignalRService {
 
     this.connection = new signalR.HubConnectionBuilder()
       .withUrl(HUB_URL, {
-        accessTokenFactory: () => localStorage.getItem('token') || ""
+        withCredentials: true
       })
       .withAutomaticReconnect()
       .configureLogging(signalR.LogLevel.Warning)
