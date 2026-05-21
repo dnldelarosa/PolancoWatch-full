@@ -19,6 +19,7 @@ using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 var enableSwagger = builder.Configuration.GetValue<bool>("ENABLE_SWAGGER");
+builder.Logging.AddFilter("Microsoft.EntityFrameworkCore.Database.Command", LogLevel.Warning);
 
 // Add services to the container.
 builder.Services.AddControllers();
@@ -64,15 +65,20 @@ builder.Services.AddSingleton<IDockerClient>(sp => {
     return new DockerClientConfiguration(new Uri(dockerUri)).CreateClient();
 });
 // Configure JWT Authentication
-var jwtKey = Environment.GetEnvironmentVariable("JWT_KEY") 
-          ?? Environment.GetEnvironmentVariable("JWT_SECRET") 
-          ?? builder.Configuration["Jwt:Key"];
+var jwtKey = FirstConfigured(
+    Environment.GetEnvironmentVariable("JWT_KEY"),
+    Environment.GetEnvironmentVariable("JWT_SECRET"),
+    builder.Configuration["Jwt:Key"]);
 
 if (builder.Environment.IsProduction())
 {
     if (string.IsNullOrEmpty(jwtKey))
     {
         throw new InvalidOperationException("Critical configuration 'Jwt:Key' is missing in production environment.");
+    }
+    if (jwtKey.Length < 32)
+    {
+        throw new InvalidOperationException("Critical configuration 'Jwt:Key' must be at least 32 characters in production environment.");
     }
     if (string.IsNullOrEmpty(builder.Configuration["Jwt:Issuer"]))
     {
@@ -84,10 +90,12 @@ if (builder.Environment.IsProduction())
     }
 
     // VULN-15: Validate Google Drive secrets at startup in production
-    var gDriveClientId = Environment.GetEnvironmentVariable("GOOGLE_DRIVE_CLIENT_ID")
-                      ?? builder.Configuration["GoogleDrive:ClientId"];
-    var gDriveClientSecret = Environment.GetEnvironmentVariable("GOOGLE_DRIVE_CLIENT_SECRET")
-                          ?? builder.Configuration["GoogleDrive:ClientSecret"];
+    var gDriveClientId = FirstConfigured(
+        Environment.GetEnvironmentVariable("GOOGLE_DRIVE_CLIENT_ID"),
+        builder.Configuration["GoogleDrive:ClientId"]);
+    var gDriveClientSecret = FirstConfigured(
+        Environment.GetEnvironmentVariable("GOOGLE_DRIVE_CLIENT_SECRET"),
+        builder.Configuration["GoogleDrive:ClientSecret"]);
     if (string.IsNullOrEmpty(gDriveClientId) || string.IsNullOrEmpty(gDriveClientSecret))
     {
         // Non-fatal warning: Drive is optional, but log it prominently
@@ -138,11 +146,14 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 // Allow CORS for frontend
 builder.Services.AddCors(options =>
 {
-    var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
-    var appUrl = Environment.GetEnvironmentVariable("APP_URL") ?? builder.Configuration["APP_URL"];
+    var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+        ?.Where(origin => !string.IsNullOrWhiteSpace(origin))
+        .Select(origin => origin.Trim())
+        .ToArray();
+    var appUrl = FirstConfigured(Environment.GetEnvironmentVariable("APP_URL"), builder.Configuration["APP_URL"]);
 
     options.AddPolicy("AllowAll",
-        b => b.WithOrigins(allowedOrigins ?? new[] { appUrl ?? "http://localhost:5173" })
+        b => b.WithOrigins(allowedOrigins is { Length: > 0 } ? allowedOrigins : new[] { appUrl ?? "http://localhost:5173" })
               .AllowAnyMethod()
               .AllowAnyHeader()
               .AllowCredentials());
@@ -306,3 +317,16 @@ app.MapHub<BackupHub>("/backuphub");
 
 
 app.Run();
+
+static string? FirstConfigured(params string?[] values)
+{
+    foreach (var value in values)
+    {
+        if (!string.IsNullOrWhiteSpace(value))
+        {
+            return value.Trim();
+        }
+    }
+
+    return null;
+}

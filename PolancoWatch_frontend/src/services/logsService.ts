@@ -22,10 +22,9 @@ class LogsService {
     this.currentContainerId = containerId;
     this.logListener = onLogReceived;
 
-    const token = localStorage.getItem('token');
     this.connection = new signalR.HubConnectionBuilder()
       .withUrl(LOGS_HUB_URL, {
-        accessTokenFactory: () => token || ""
+        accessTokenFactory: () => localStorage.getItem('token') || ""
       })
       .withAutomaticReconnect()
       .configureLogging(signalR.LogLevel.Warning)

@@ -11,6 +11,7 @@ namespace PolancoWatch.API.Controllers;
 [Route("api/[controller]")]
 public class SettingsController : ControllerBase
 {
+    private const string SecretMask = "********";
     private readonly ApplicationDbContext _context;
 
     public SettingsController(ApplicationDbContext context)
@@ -28,7 +29,7 @@ public class SettingsController : ControllerBase
             _context.NotificationSettings.Add(settings);
             await _context.SaveChangesAsync();
         }
-        return Ok(settings);
+        return Ok(MaskSecrets(settings));
     }
 
     [HttpPut("notifications")]
@@ -37,19 +38,33 @@ public class SettingsController : ControllerBase
         var existing = await _context.NotificationSettings.FirstOrDefaultAsync();
         if (existing == null)
         {
+            if (IsMaskedSecret(settings.TelegramBotToken))
+            {
+                settings.TelegramBotToken = null;
+            }
+            if (IsMaskedSecret(settings.SmtpPass))
+            {
+                settings.SmtpPass = null;
+            }
             _context.NotificationSettings.Add(settings);
         }
         else
         {
             existing.TelegramEnabled = settings.TelegramEnabled;
-            existing.TelegramBotToken = settings.TelegramBotToken;
+            if (!IsMaskedSecret(settings.TelegramBotToken))
+            {
+                existing.TelegramBotToken = settings.TelegramBotToken;
+            }
             existing.TelegramChatId = settings.TelegramChatId;
             existing.EmailEnabled = settings.EmailEnabled;
             existing.SmtpHost = settings.SmtpHost;
             existing.SmtpPort = settings.SmtpPort;
             existing.SmtpEnableSsl = settings.SmtpEnableSsl;
             existing.SmtpUser = settings.SmtpUser;
-            existing.SmtpPass = settings.SmtpPass;
+            if (!IsMaskedSecret(settings.SmtpPass))
+            {
+                existing.SmtpPass = settings.SmtpPass;
+            }
             existing.TelegramMessageTemplate = settings.TelegramMessageTemplate;
             existing.EmailMessageTemplate = settings.EmailMessageTemplate;
             existing.FromEmail = settings.FromEmail;
@@ -58,5 +73,31 @@ public class SettingsController : ControllerBase
 
         await _context.SaveChangesAsync();
         return NoContent();
+    }
+
+    private static NotificationSettings MaskSecrets(NotificationSettings settings)
+    {
+        return new NotificationSettings
+        {
+            Id = settings.Id,
+            EmailEnabled = settings.EmailEnabled,
+            SmtpHost = settings.SmtpHost,
+            SmtpPort = settings.SmtpPort,
+            SmtpUser = settings.SmtpUser,
+            SmtpPass = string.IsNullOrWhiteSpace(settings.SmtpPass) ? null : SecretMask,
+            SmtpEnableSsl = settings.SmtpEnableSsl,
+            FromEmail = settings.FromEmail,
+            ToEmail = settings.ToEmail,
+            EmailMessageTemplate = settings.EmailMessageTemplate,
+            TelegramEnabled = settings.TelegramEnabled,
+            TelegramBotToken = string.IsNullOrWhiteSpace(settings.TelegramBotToken) ? null : SecretMask,
+            TelegramChatId = settings.TelegramChatId,
+            TelegramMessageTemplate = settings.TelegramMessageTemplate
+        };
+    }
+
+    private static bool IsMaskedSecret(string? value)
+    {
+        return string.Equals(value, SecretMask, StringComparison.Ordinal);
     }
 }

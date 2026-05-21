@@ -9,13 +9,52 @@ const api = axios.create({
   },
 });
 
+const clearAuthState = () => {
+  localStorage.removeItem('token');
+  localStorage.removeItem('username');
+};
+
+const isTokenValid = (token: string | null) => {
+  if (!token) return false;
+
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64.padEnd(base64.length + ((4 - base64.length % 4) % 4), '=');
+    const payload = JSON.parse(atob(padded));
+    if (!payload.exp) return true;
+    return payload.exp * 1000 > Date.now();
+  } catch {
+    return false;
+  }
+};
+
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
+  if (token && !isTokenValid(token)) {
+    clearAuthState();
+    if (window.location.pathname !== '/login') {
+      window.location.href = '/login';
+    }
+    return config;
+  }
+
   if (token && config.headers) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 }, (error) => {
+  return Promise.reject(error);
+});
+
+api.interceptors.response.use((response) => response, (error) => {
+  if (error.response?.status === 401) {
+    clearAuthState();
+    if (window.location.pathname !== '/login') {
+      window.location.href = '/login';
+    }
+  }
+
   return Promise.reject(error);
 });
 
@@ -28,8 +67,7 @@ export const authService = {
     return response.data;
   },
   logout: () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('username');
+    clearAuthState();
   },
   forgotPassword: async (email?: string, username?: string) => {
     const response = await api.post('/api/auth/forgot-password', { email, username });
@@ -40,7 +78,7 @@ export const authService = {
     return response.data;
   },
   isAuthenticated: () => {
-    return !!localStorage.getItem('token');
+    return isTokenValid(localStorage.getItem('token'));
   },
   updateProfile: async (currentPassword: string, newUsername?: string, newPassword?: string) => {
     const response = await api.post('/api/auth/profile', { currentPassword, newUsername, newPassword });

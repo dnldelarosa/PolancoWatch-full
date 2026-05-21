@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.IO.Compression;
 using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using PolancoWatch.Application.Interfaces;
@@ -332,10 +333,10 @@ public class BackupService : IBackupService
         }
 
         string sqlFileName = $"{backupName}.sql";
-        string databaseArguments = string.IsNullOrEmpty(targetDb) ? "--all-databases" : $"--databases {targetDb}";
-        var safePass = dbPass.Replace("'", "'\\''");
-        var safeUser = dbUser.Replace("'", "'\\''");
-        string dumpCmd = $"mysqldump -u '{safeUser}' -p'{safePass}' --single-transaction {databaseArguments} > /tmp/{sqlFileName}";
+        string databaseArguments = string.IsNullOrEmpty(targetDb)
+            ? "--all-databases"
+            : $"--databases {ShellQuote(ValidateDatabaseName(targetDb))}";
+        string dumpCmd = $"mysqldump -u {ShellQuote(dbUser)} -p{ShellQuote(dbPass)} --single-transaction {databaseArguments} > {ShellQuote($"/tmp/{sqlFileName}")}";
 
         var execParams = new ContainerExecCreateParameters
         {
@@ -491,9 +492,7 @@ public class BackupService : IBackupService
             return new List<string>();
         }
 
-        var safePass = dbPass.Replace("'", "'\\''");
-        var safeUser = dbUser.Replace("'", "'\\''");
-        string cmd = $"mysql -u '{safeUser}' -p'{safePass}' -e 'SHOW DATABASES;' -s --skip-column-names || mariadb -u '{safeUser}' -p'{safePass}' -e 'SHOW DATABASES;' -s --skip-column-names";
+        string cmd = $"mysql -u {ShellQuote(dbUser)} -p{ShellQuote(dbPass)} -e 'SHOW DATABASES;' -s --skip-column-names || mariadb -u {ShellQuote(dbUser)} -p{ShellQuote(dbPass)} -e 'SHOW DATABASES;' -s --skip-column-names";
 
         var execParams = new ContainerExecCreateParameters
         {
@@ -705,5 +704,21 @@ public class BackupService : IBackupService
             string error = process.StandardError.ReadToEnd() ?? "Unknown tar error";
             throw new Exception($"Tar command failed: {error}");
         }
+    }
+
+    private static string ValidateDatabaseName(string databaseName)
+    {
+        var trimmed = databaseName.Trim();
+        if (!Regex.IsMatch(trimmed, @"^[A-Za-z0-9_$-]+$"))
+        {
+            throw new ArgumentException("Database name contains unsupported characters.");
+        }
+
+        return trimmed;
+    }
+
+    private static string ShellQuote(string value)
+    {
+        return $"'{value.Replace("'", "'\\''")}'";
     }
 }

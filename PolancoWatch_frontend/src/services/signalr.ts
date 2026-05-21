@@ -13,10 +13,9 @@ class SignalRService {
   private ensureConnection() {
     if (this.connection) return this.connection;
 
-    const token = localStorage.getItem('token');
     this.connection = new signalR.HubConnectionBuilder()
       .withUrl(HUB_URL, {
-        accessTokenFactory: () => token || ""
+        accessTokenFactory: () => localStorage.getItem('token') || ""
       })
       .withAutomaticReconnect([0, 2000, 10000, 30000])
       .configureLogging(signalR.LogLevel.Warning)
