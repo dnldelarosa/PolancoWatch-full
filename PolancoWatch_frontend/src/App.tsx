@@ -14,6 +14,7 @@ const WebMonitors = React.lazy(() => import('./pages/WebMonitors'));
 const WebMonitorDetails = React.lazy(() => import('./pages/WebMonitorDetails'));
 const Backups = React.lazy(() => import('./pages/Backups'));
 import Sidebar from './components/Sidebar';
+import SessionGuard from './components/SessionGuard';
 import { authService } from './services/api';
 
 import ReloadPrompt from './components/ReloadPrompt';
@@ -36,6 +37,7 @@ function App() {
       <div className={`flex-1 transition-all duration-500 relative z-10 w-full overflow-x-hidden pt-24 lg:pt-0 ${collapsed ? 'lg:pl-20' : 'lg:pl-72'}`}>
         {children}
       </div>
+      <SessionGuard />
     </div>
   );
 

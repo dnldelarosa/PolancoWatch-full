@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { jwtDecode } from 'jwt-decode';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5246';
 
@@ -12,6 +13,7 @@ const api = axios.create({
 
 const clearAuthState = () => {
   localStorage.removeItem('username');
+  localStorage.removeItem('token');
 };
 
 api.interceptors.request.use((config) => {
@@ -37,6 +39,9 @@ export const authService = {
     if (response.data.username) {
       localStorage.setItem('username', response.data.username);
     }
+    if (response.data.token) {
+      localStorage.setItem('token', response.data.token);
+    }
     return response.data;
   },
   logout: async () => {
@@ -54,12 +59,29 @@ export const authService = {
     return response.data;
   },
   isAuthenticated: () => {
-    return !!localStorage.getItem('username');
+    const token = localStorage.getItem('token');
+    if (!token) return false;
+    
+    try {
+      const decoded = jwtDecode<{exp: number}>(token);
+      if (decoded.exp * 1000 > Date.now()) {
+        return true;
+      } else {
+        clearAuthState();
+        return false;
+      }
+    } catch (e) {
+      clearAuthState();
+      return false;
+    }
   },
   updateProfile: async (currentPassword: string, newUsername?: string, newPassword?: string) => {
     const response = await api.post('/api/auth/profile', { currentPassword, newUsername, newPassword });
     if (response.data.username) {
         localStorage.setItem('username', response.data.username);
+    }
+    if (response.data.token) {
+        localStorage.setItem('token', response.data.token);
     }
     return response.data;
   }
