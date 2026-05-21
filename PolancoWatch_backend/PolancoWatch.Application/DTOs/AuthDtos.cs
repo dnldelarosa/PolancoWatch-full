@@ -25,8 +25,7 @@ public class UpdateProfileRequest
     [MinLength(6)]
     public string CurrentPassword { get; set; } = string.Empty;
 
-    [StringLength(50, MinimumLength = 3)]
-    public string? NewUsername { get; set; }
+
 
     [MinLength(6)]
     [RegularExpression(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$", ErrorMessage = "Passphrase must be at least 8 characters long, containing uppercase, lowercase, numbers, and a special character.")]

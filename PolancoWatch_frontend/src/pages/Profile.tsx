@@ -4,7 +4,6 @@ import { authService } from '../services/api';
 
 export default function Profile() {
     const currentUsername = localStorage.getItem('username') || 'Admin';
-    const [newUsername, setNewUsername] = useState(currentUsername);
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -39,7 +38,7 @@ export default function Profile() {
 
         setIsSubmitting(true);
         try {
-            await authService.updateProfile(currentPassword, newUsername !== currentUsername ? newUsername : undefined, newPassword || undefined);
+            await authService.updateProfile(currentPassword, undefined, newPassword || undefined);
             setSuccessMsg("Identity parameters updated successfully.");
             setCurrentPassword('');
             setNewPassword('');
@@ -79,9 +78,9 @@ export default function Profile() {
                                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 block">System Username</label>
                                         <input 
                                             type="text" 
-                                            value={newUsername}
-                                            onChange={(e) => setNewUsername(e.target.value)}
-                                            className="w-full bg-obsidian-900/60 border border-white/5 rounded-2xl px-6 py-4 text-sm font-black text-white focus:outline-none focus:border-brand-primary/50 focus:ring-4 focus:ring-brand-primary/5 transition-all uppercase tracking-widest"
+                                            value={currentUsername}
+                                            readOnly
+                                            className="w-full bg-obsidian-900/60 border border-white/5 rounded-2xl px-6 py-4 text-sm font-black text-slate-500 cursor-not-allowed focus:outline-none transition-all uppercase tracking-widest"
                                         />
                                     </div>
                                     <p className="text-[10px] text-slate-500 italic uppercase">Your current handle is <span className="text-white font-bold">{currentUsername}</span></p>

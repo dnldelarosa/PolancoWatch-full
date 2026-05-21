@@ -202,18 +202,22 @@ using (var scope = app.Services.CreateScope())
     if (!context.Users.Any())
     {
         string? defaultPassword = Environment.GetEnvironmentVariable("ADMIN_INITIAL_PASSWORD");
+        string initialUsername = Environment.GetEnvironmentVariable("ADMIN_INITIAL_USERNAME") ?? "admin";
+        
         if (string.IsNullOrEmpty(defaultPassword))
         {
             defaultPassword = Guid.NewGuid().ToString("N").Substring(0, 16);
             Console.WriteLine("==================================================");
-            Console.WriteLine($"ADMIN USER CREATED. Initial Password: {defaultPassword}");
+            Console.WriteLine($"ADMIN USER CREATED.");
+            Console.WriteLine($"Username: {initialUsername}");
+            Console.WriteLine($"Initial Password: {defaultPassword}");
             Console.WriteLine("Please change this password after your first login.");
             Console.WriteLine("==================================================");
         }
 
         context.Users.Add(new User
         {
-            Username = "admin",
+            Username = initialUsername,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(defaultPassword),
             Email = "admin@example.com", // Default email for reset
             IsAdmin = true

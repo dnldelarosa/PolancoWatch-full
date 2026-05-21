@@ -55,14 +55,6 @@ public class AuthService : IAuthService
         if (!verified) return (false, "Incorrect current password.", null);
 
         bool usernameChanged = false;
-        if (!string.IsNullOrWhiteSpace(request.NewUsername) && request.NewUsername != currentUsername)
-        {
-            var existingUser = await _context.Users.AnyAsync(u => u.Username == request.NewUsername);
-            if (existingUser) return (false, "Username already taken.", null);
-            
-            user.Username = request.NewUsername;
-            usernameChanged = true;
-        }
 
         if (!string.IsNullOrWhiteSpace(request.NewPassword))
         {
