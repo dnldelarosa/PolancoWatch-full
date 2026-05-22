@@ -39,24 +39,43 @@ public class BackupService : IBackupService
             return new List<string>();
         }
 
-        string cmd = $"mysql -u {ShellQuote(dbUser)} -p{ShellQuote(dbPass)} -e 'SHOW DATABASES;' -s --skip-column-names || mariadb -u {ShellQuote(dbUser)} -p{ShellQuote(dbPass)} -e 'SHOW DATABASES;' -s --skip-column-names";
-
-        var execParams = new ContainerExecCreateParameters
-        {
-            AttachStdout = true,
-            AttachStderr = true,
-            Cmd = new[] { "sh", "-c", cmd }
-        };
-
         try
         {
+            var containerInfo = await _dockerClient.Containers.InspectContainerAsync(containerId);
+            string image = containerInfo.Config.Image.ToLowerInvariant();
+            bool isPostgres = image.Contains("postgres") || image.Contains("supabase");
+
+            string cmd;
+            if (isPostgres)
+            {
+                cmd = $"PGPASSWORD={ShellQuote(dbPass)} psql -U {ShellQuote(dbUser)} -t -c 'SELECT datname FROM pg_database WHERE datistemplate = false;'";
+            }
+            else
+            {
+                cmd = $"mysql -u {ShellQuote(dbUser)} -p{ShellQuote(dbPass)} -e 'SHOW DATABASES;' -s --skip-column-names || mariadb -u {ShellQuote(dbUser)} -p{ShellQuote(dbPass)} -e 'SHOW DATABASES;' -s --skip-column-names";
+            }
+
+            var execParams = new ContainerExecCreateParameters
+            {
+                AttachStdout = true,
+                AttachStderr = true,
+                Cmd = new[] { "sh", "-c", cmd }
+            };
+
             var execResponse = await _dockerClient.Exec.ExecCreateContainerAsync(containerId, execParams);
             using (var stream = await _dockerClient.Exec.StartAndAttachContainerExecAsync(execResponse.ID, false, CancellationToken.None))
             {
                 var res = await stream.ReadOutputToEndAsync(CancellationToken.None);
-                if (!string.IsNullOrEmpty(res.stderr) && res.stderr.Contains("error", StringComparison.OrdinalIgnoreCase) && !res.stderr.Contains("Warning: Using a password", StringComparison.OrdinalIgnoreCase))
+                if (!string.IsNullOrEmpty(res.stderr))
                 {
-                    return new List<string>();
+                    bool isMySqlWarning = res.stderr.Contains("Warning: Using a password", StringComparison.OrdinalIgnoreCase);
+                    bool hasErrorKeyword = res.stderr.Contains("error", StringComparison.OrdinalIgnoreCase) || 
+                                           res.stderr.Contains("fatal", StringComparison.OrdinalIgnoreCase);
+                    
+                    if (hasErrorKeyword && !isMySqlWarning)
+                    {
+                        return new List<string>();
+                    }
                 }
                 
                 var databases = new List<string>();
@@ -64,6 +83,7 @@ public class BackupService : IBackupService
                 foreach (var line in lines)
                 {
                     var trimmed = line.Trim();
+                    // 'postgres' user DB is valid to backup. MySQL system schemas are filtered out.
                     if (!string.IsNullOrEmpty(trimmed) && trimmed != "information_schema" && trimmed != "performance_schema" && trimmed != "mysql" && trimmed != "sys")
                     {
                         databases.Add(trimmed);
