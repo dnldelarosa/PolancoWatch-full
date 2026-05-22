@@ -1261,7 +1261,7 @@ const Backups = () => {
               placeholder="Select database source..."
             />
             {newBackupTarget !== "" && (
-              <div className="mt-4 space-y-4 animate-fade-in">
+              <div className="mt-4 space-y-4 animate-fade-in relative z-[60]">
                 <div className="flex gap-2">
                   <div className="flex-1 space-y-2">
                     <label className="text-[8px] font-black uppercase text-slate-500 tracking-widest ml-1">DB User</label>
@@ -1306,7 +1306,7 @@ const Backups = () => {
           />
         </div>
 
-        <div className="p-5 bg-white/5 rounded-4xl border border-white/5 space-y-4">
+        <div className="p-5 bg-white/5 rounded-4xl border border-white/5 space-y-4 relative z-[40]">
           <p className="text-[8px] font-black uppercase text-slate-500 tracking-widest ml-1">Storage Destination</p>
           <div className="grid grid-cols-3 gap-2">
             {(['local', 'both', 'drive'] as const).map((opt) => {
@@ -1555,7 +1555,7 @@ const Backups = () => {
                 placeholder="Select database source..."
               />
               {newSchedTarget !== "" && (
-                <div className="mt-4 space-y-4 animate-fade-in">
+                <div className="mt-4 space-y-4 animate-fade-in relative z-[60]">
                   <div className="flex gap-2">
                     <div className="flex-1 space-y-2">
                       <label className="text-[8px] font-black uppercase text-slate-500 tracking-widest ml-1">DB User</label>
@@ -1615,7 +1615,7 @@ const Backups = () => {
           </div>
 
           {newSchedStorage !== 'local' && (
-            <div className="p-5 bg-brand-primary/5 rounded-2xl border border-brand-primary/10 space-y-3 animate-fade-in -mt-4">
+            <div className="p-5 bg-brand-primary/5 rounded-2xl border border-brand-primary/10 space-y-3 animate-fade-in relative z-[40] -mt-4">
                <div className="flex items-center gap-2">
                  <Cloud size={14} className="text-brand-primary" />
                  <span className="text-[9px] font-black uppercase text-brand-primary tracking-widest">Cloud Relay Identity</span>
