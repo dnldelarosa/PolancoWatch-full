@@ -35,6 +35,10 @@ public class DockerDatabaseBackupStrategy : IBackupStrategy
     {
         string containerId = await ResolveContainerIdAsync(context.TargetPath);
 
+        var containerInfo = await _dockerClient.Containers.InspectContainerAsync(containerId);
+        string image = containerInfo.Config.Image.ToLowerInvariant();
+        bool isPostgres = image.Contains("postgres") || image.Contains("supabase");
+
         string backupName = context.BackupName;
         if (!string.IsNullOrEmpty(backupName))
         {
@@ -48,10 +52,20 @@ public class DockerDatabaseBackupStrategy : IBackupStrategy
         }
 
         string sqlFileName = $"{backupName}.sql";
-        string databaseArguments = string.IsNullOrEmpty(context.DbName)
-            ? "--all-databases"
-            : $"--databases {ShellQuote(ValidateDatabaseName(context.DbName))}";
-        string dumpCmd = $"mysqldump -u {ShellQuote(context.DbUser)} -p{ShellQuote(context.DbPass)} --single-transaction {databaseArguments} > {ShellQuote($"/tmp/{sqlFileName}")}";
+        string dumpCmd;
+
+        if (isPostgres)
+        {
+            string dbTarget = string.IsNullOrEmpty(context.DbName) ? "postgres" : ShellQuote(ValidateDatabaseName(context.DbName));
+            dumpCmd = $"PGPASSWORD={ShellQuote(context.DbPass)} pg_dump -U {ShellQuote(context.DbUser)} -d {dbTarget} > {ShellQuote($"/tmp/{sqlFileName}")}";
+        }
+        else
+        {
+            string databaseArguments = string.IsNullOrEmpty(context.DbName)
+                ? "--all-databases"
+                : $"--databases {ShellQuote(ValidateDatabaseName(context.DbName))}";
+            dumpCmd = $"mysqldump -u {ShellQuote(context.DbUser)} -p{ShellQuote(context.DbPass)} --single-transaction {databaseArguments} > {ShellQuote($"/tmp/{sqlFileName}")}";
+        }
 
         var execParams = new ContainerExecCreateParameters
         {
@@ -68,9 +82,17 @@ public class DockerDatabaseBackupStrategy : IBackupStrategy
             using (var stream = await _dockerClient.Exec.StartAndAttachContainerExecAsync(execResponse.ID, false, CancellationToken.None))
             {
                 var res = await stream.ReadOutputToEndAsync(CancellationToken.None);
-                if (!string.IsNullOrEmpty(res.stderr) && res.stderr.Contains("error", StringComparison.OrdinalIgnoreCase) && !res.stderr.Contains("Warning: Using a password", StringComparison.OrdinalIgnoreCase))
+                if (!string.IsNullOrEmpty(res.stderr))
                 {
-                    throw new Exception($"mysqldump failed: {res.stderr}");
+                    bool isMySqlWarning = res.stderr.Contains("Warning: Using a password", StringComparison.OrdinalIgnoreCase);
+                    bool hasErrorKeyword = res.stderr.Contains("error", StringComparison.OrdinalIgnoreCase) || 
+                                           res.stderr.Contains("fatal", StringComparison.OrdinalIgnoreCase);
+                    
+                    if (hasErrorKeyword && !isMySqlWarning)
+                    {
+                        string tool = isPostgres ? "pg_dump" : "mysqldump";
+                        throw new Exception($"{tool} failed: {res.stderr}");
+                    }
                 }
             }
         }
@@ -95,7 +117,8 @@ public class DockerDatabaseBackupStrategy : IBackupStrategy
 
             if (inspect.Running || inspect.ExitCode != 0)
             {
-                throw new Exception($"mysqldump failed or timed out. Exit code: {inspect.ExitCode}");
+                string tool = isPostgres ? "pg_dump" : "mysqldump";
+                throw new Exception($"{tool} failed or timed out. Exit code: {inspect.ExitCode}");
             }
         }
 
@@ -136,7 +159,8 @@ public class DockerDatabaseBackupStrategy : IBackupStrategy
             var localFileInfo = new FileInfo(localSqlPath);
             if (!localFileInfo.Exists || localFileInfo.Length == 0)
             {
-                throw new Exception("mysqldump produced a 0-byte file. Check your credentials and database name.");
+                string tool = isPostgres ? "pg_dump" : "mysqldump";
+                throw new Exception($"{tool} produced a 0-byte file. Check your credentials and database name.");
             }
 
             string extension = context.Format == BackupFormat.Zip ? ".zip" : ".tar.gz";
