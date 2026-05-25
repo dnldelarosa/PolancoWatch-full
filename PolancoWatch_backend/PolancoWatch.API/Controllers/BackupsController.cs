@@ -492,9 +492,20 @@ public class BackupsController : ControllerBase
     }
 
     [HttpDelete]
-    public async Task<IActionResult> DeleteAllBackups()
+    public async Task<IActionResult> DeleteAllBackups([FromQuery] string? status = null)
     {
-        var backups = await _context.Backups.ToListAsync();
+        IQueryable<Backup> query = _context.Backups;
+
+        if (!string.IsNullOrEmpty(status) && status != "all")
+        {
+            if (int.TryParse(status, out var statusVal))
+            {
+                var statusEnum = (BackupStatus)statusVal;
+                query = query.Where(b => b.Status == statusEnum);
+            }
+        }
+
+        var backups = await query.ToListAsync();
         foreach (var backup in backups)
         {
             try

@@ -216,7 +216,7 @@ export interface BackupService {
   deleteSchedule: (id: string) => Promise<void>;
   executeSchedule: (id: string) => Promise<any>;
   deleteBackup: (id: string) => Promise<any>;
-  deleteAllBackups: () => Promise<any>;
+  deleteAllBackups: (status?: string) => Promise<any>;
   downloadBackup: (id: string, fileName: string) => Promise<void>;
   getAllowedPaths?: () => Promise<string[]>; // Deprecated
   getAvailableVolumes: () => Promise<{ name: string, path: string }[]>;
@@ -261,7 +261,10 @@ export const backupService: BackupService = {
   deleteSchedule: (id) => api.delete(`/api/backups/schedules/${id}`).then(res => res.data),
   executeSchedule: (id) => api.post(`/api/backups/schedules/${id}/execute`).then(res => res.data),
   deleteBackup: (id: string) => api.delete(`/api/backups/${id}`),
-  deleteAllBackups: () => api.delete('/api/backups'),
+  deleteAllBackups: (status?: string) => {
+    const params = status && status !== 'all' ? `?status=${status}` : '';
+    return api.delete(`/api/backups${params}`);
+  },
   downloadBackup: (id: string, fileName: string) => 
     api.get(`/api/backups/${id}/download`, { responseType: 'blob' }).then(res => {
       const url = window.URL.createObjectURL(new Blob([res.data]));

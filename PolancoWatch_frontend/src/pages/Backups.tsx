@@ -310,6 +310,15 @@ const Backups = () => {
     return b.status === parseInt(statusFilter);
   });
 
+  const getWipeButtonLabel = () => {
+    if (statusFilter === 'all') return 'Wipe History';
+    if (statusFilter === '0') return 'Wipe Pending';
+    if (statusFilter === '1') return 'Wipe Running';
+    if (statusFilter === '2') return 'Wipe Completed';
+    if (statusFilter === '3') return 'Wipe Failed';
+    return 'Wipe History';
+  };
+
   const parseFolderId = (value: string) => {
     // Check for Google Drive URL pattern
     const match = value.match(/folders\/([a-zA-Z0-9_-]+)/);
@@ -652,7 +661,7 @@ const Backups = () => {
   const confirmDeleteAll = async () => {
     try {
       showToast("Purging backup history...", "loading");
-      await backupService.deleteAllBackups();
+      await backupService.deleteAllBackups(statusFilter);
       showToast("Vault history sanitized", "success");
       setIsDeleteAllModalOpen(false);
       fetchData();
@@ -899,13 +908,13 @@ const Backups = () => {
                 </div>
 
                 {/* Wipe History Button */}
-                {backups.length > 0 && (
+                {filteredBackups.length > 0 && (
                   <button
                     onClick={() => setIsDeleteAllModalOpen(true)}
                     className="px-4 py-2 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 hover:border-rose-500/40 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center gap-2 w-fit"
                   >
                     <Trash2 size={12} />
-                    Wipe History
+                    {getWipeButtonLabel()}
                   </button>
                 )}
               </div>
@@ -1785,7 +1794,7 @@ const Backups = () => {
       <Modal
         isOpen={isDeleteAllModalOpen}
         onClose={() => setIsDeleteAllModalOpen(false)}
-        title="Sanitize Vault History"
+        title={statusFilter === 'all' ? 'Sanitize Vault History' : `Sanitize ${getWipeButtonLabel().replace('Wipe ', '')} History`}
         type="danger"
         footer={
           <>
@@ -1804,7 +1813,10 @@ const Backups = () => {
           </>
         }
       >
-        Are you absolutely sure you want to permanently decommission all backups in the history? This will delete all backup archive files from the disk and purge all registry logs. This operation cannot be undone.
+        {statusFilter === 'all' 
+          ? "Are you absolutely sure you want to permanently decommission all backups in the history? This will delete all backup archive files from the disk and purge all registry logs. This operation cannot be undone."
+          : `Are you absolutely sure you want to permanently decommission all ${getWipeButtonLabel().replace('Wipe ', '').toLowerCase()} backups in the history? This will delete those backup archive files from the disk and purge their registry logs. This operation cannot be undone.`
+        }
       </Modal>
 
       <VaultOverlay
