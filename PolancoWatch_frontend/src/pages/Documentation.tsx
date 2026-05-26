@@ -365,7 +365,7 @@ export default function Documentation() {
                                                 Otorga permisos de superusuario a <strong className="text-white">postgres</strong> temporalmente para poder restaurar los triggers, y limpia las extensiones y esquemas del sistema:
                                             </p>
                                             <div className="bg-obsidian-950 rounded-xl p-4 border border-white/5 font-mono text-[10px] text-slate-300 overflow-x-auto">
-                                                docker exec -i devops-supabase-dcf6e8-db psql -U supabase_admin -d postgres &lt;&lt;EOF<br/>
+                                                docker exec -i [NOMBRE_CONTENEDOR_DB] psql -U supabase_admin -d postgres &lt;&lt;EOF<br/>
                                                 ALTER ROLE postgres SUPERUSER;<br/>
                                                 DROP EXTENSION IF EXISTS pg_cron CASCADE;<br/>
                                                 DROP EXTENSION IF EXISTS pg_graphql CASCADE;<br/>
@@ -402,7 +402,7 @@ export default function Documentation() {
                                                 Prepara la base de datos recreando el esquema principal de tu proyecto:
                                             </p>
                                             <div className="bg-obsidian-950 rounded-xl p-4 border border-white/5 font-mono text-[10px] text-slate-300">
-                                                docker exec -i devops-supabase-dcf6e8-db psql -U supabase_admin -d postgres -c "CREATE SCHEMA public;"
+                                                docker exec -i [NOMBRE_CONTENEDOR_DB] psql -U supabase_admin -d postgres -c "CREATE SCHEMA public;"
                                             </div>
                                         </div>
                                     </div>
@@ -415,7 +415,7 @@ export default function Documentation() {
                                                 Inyecta el archivo SQL de tu copia de seguridad al contenedor de base de datos de Supabase:
                                             </p>
                                             <div className="bg-obsidian-950 rounded-xl p-4 border border-white/5 font-mono text-[10px] text-slate-300">
-                                                cat /var/backups/Comodo-Supabase-Stagging.sql | docker exec -i devops-supabase-dcf6e8-db psql -U supabase_admin -d postgres
+                                                cat /var/backups/Comodo-Supabase-Stagging.sql | docker exec -i [NOMBRE_CONTENEDOR_DB] psql -U supabase_admin -d postgres
                                             </div>
                                         </div>
                                     </div>
@@ -428,7 +428,7 @@ export default function Documentation() {
                                                 Por buenas prácticas de seguridad, retira los permisos de superusuario a <strong className="text-white">postgres</strong>:
                                             </p>
                                             <div className="bg-obsidian-950 rounded-xl p-4 border border-white/5 font-mono text-[10px] text-slate-300">
-                                                docker exec -i devops-supabase-dcf6e8-db psql -U supabase_admin -d postgres -c "ALTER ROLE postgres NOSUPERUSER;"
+                                                docker exec -i [NOMBRE_CONTENEDOR_DB] psql -U supabase_admin -d postgres -c "ALTER ROLE postgres NOSUPERUSER;"
                                             </div>
                                         </div>
                                     </div>

@@ -32,7 +32,7 @@ Si necesitas realizar la restauración de forma manual en un nuevo servidor o co
 Este comando otorga privilegios de superusuario temporalmente a `postgres` (necesario para restaurar la propiedad de los event triggers), elimina las extensiones conflictivas primero, y luego elimina todos los esquemas en cascada de forma individual para evitar abortos:
 
 ```bash
-docker exec -i devops-supabase-dcf6e8-db psql -U supabase_admin -d postgres <<EOF
+docker exec -i [NOMBRE_CONTENEDOR_DB] psql -U supabase_admin -d postgres <<EOF
 ALTER ROLE postgres SUPERUSER;
 DROP EXTENSION IF EXISTS pg_cron CASCADE;
 DROP EXTENSION IF EXISTS pg_graphql CASCADE;
@@ -63,21 +63,21 @@ EOF
 PostgreSQL requiere tener el esquema de usuario inicializado antes de cargar las tablas:
 
 ```bash
-docker exec -i devops-supabase-dcf6e8-db psql -U supabase_admin -d postgres -c "CREATE SCHEMA public;"
+docker exec -i [NOMBRE_CONTENEDOR_DB] psql -U supabase_admin -d postgres -c "CREATE SCHEMA public;"
 ```
 
 ### Paso 3: Restaurar el archivo SQL
 Importa los datos del respaldo inyectándolo al contenedor. **Nota:** Usamos `-U supabase_admin` porque es el rol superusuario real de la base de datos:
 
 ```bash
-cat /var/backups/Comodo-Supabase-Stagging.sql | docker exec -i devops-supabase-dcf6e8-db psql -U supabase_admin -d postgres
+cat /var/backups/Comodo-Supabase-Stagging.sql | docker exec -i [NOMBRE_CONTENEDOR_DB] psql -U supabase_admin -d postgres
 ```
 
 ### Paso 4: Revocar privilegios elevados de `postgres` (Seguridad)
 Una vez finalizado el proceso de carga de datos y configuración, devuelve al usuario `postgres` a su estado seguro original:
 
 ```bash
-docker exec -i devops-supabase-dcf6e8-db psql -U supabase_admin -d postgres -c "ALTER ROLE postgres NOSUPERUSER;"
+docker exec -i [NOMBRE_CONTENEDOR_DB] psql -U supabase_admin -d postgres -c "ALTER ROLE postgres NOSUPERUSER;"
 ```
 
 ---
@@ -100,5 +100,5 @@ supabase db dump --db-url "postgresql://postgres:TU_PASSWORD@IP_DATABASE:5432/po
 Para restaurar los datos sin que los triggers del sistema generen registros duplicados de prueba o violaciones de llaves foráneas en cascada:
 ```bash
 # Inyectar modo replica al inicio de la carga del archivo de datos
-(echo "SET session_replication_role = replica;"; cat data.sql) | docker exec -i devops-supabase-dcf6e8-db psql -U supabase_admin -d postgres
+(echo "SET session_replication_role = replica;"; cat data.sql) | docker exec -i [NOMBRE_CONTENEDOR_DB] psql -U supabase_admin -d postgres
 ```
