@@ -369,7 +369,25 @@ public class BackupsController : ControllerBase
     [HttpGet("schedules")]
     public async Task<ActionResult<IEnumerable<BackupSchedule>>> GetSchedules()
     {
-        return await _context.BackupSchedules.ToListAsync();
+        var schedules = await _context.BackupSchedules.ToListAsync();
+        var now = DateTimeOffset.UtcNow;
+        bool modified = false;
+
+        foreach (var schedule in schedules)
+        {
+            if (schedule.IsActive && (!schedule.NextRun.HasValue || schedule.NextRun.Value < now))
+            {
+                schedule.NextRun = ScheduleHelper.CalculateNextRun(schedule, now);
+                modified = true;
+            }
+        }
+
+        if (modified)
+        {
+            await _context.SaveChangesAsync();
+        }
+
+        return schedules;
     }
 
     [HttpPost("schedules")]
@@ -381,10 +399,12 @@ public class BackupsController : ControllerBase
         await _context.SaveChangesAsync();
         if (schedule.IsActive)
         {
+            var username = User.Identity?.Name ?? "admin";
             _recurringJobs.AddOrUpdate<BackupManager>(
                 $"backup_{schedule.Id}", 
-                manager => manager.RunBackupAsync(schedule.Type, schedule.Target, schedule.Format, schedule.SyncToCloud, schedule.CloudFolderId, null, schedule.KeepLocal, schedule.RetentionCount, schedule.SendTelegram, "system"), 
-                ScheduleHelper.GetCronFromSchedule(schedule));
+                manager => manager.RunBackupAsync(schedule.Type, schedule.Target, schedule.Format, schedule.SyncToCloud, schedule.CloudFolderId, null, schedule.KeepLocal, schedule.RetentionCount, schedule.SendTelegram, username), 
+                ScheduleHelper.GetCronFromSchedule(schedule),
+                new RecurringJobOptions { TimeZone = ScheduleHelper.GetDominicanTimeZone() });
         }
         
         return CreatedAtAction(nameof(GetSchedules), new { id = schedule.Id }, schedule);
@@ -419,10 +439,12 @@ public class BackupsController : ControllerBase
         await _context.SaveChangesAsync();
         if (existing.IsActive)
         {
+            var username = User.Identity?.Name ?? "admin";
             _recurringJobs.AddOrUpdate<BackupManager>(
                 $"backup_{existing.Id}", 
-                manager => manager.RunBackupAsync(existing.Type, existing.Target, existing.Format, existing.SyncToCloud, existing.CloudFolderId, null, existing.KeepLocal, existing.RetentionCount, existing.SendTelegram, "system"), 
-                ScheduleHelper.GetCronFromSchedule(existing));
+                manager => manager.RunBackupAsync(existing.Type, existing.Target, existing.Format, existing.SyncToCloud, existing.CloudFolderId, null, existing.KeepLocal, existing.RetentionCount, existing.SendTelegram, username), 
+                ScheduleHelper.GetCronFromSchedule(existing),
+                new RecurringJobOptions { TimeZone = ScheduleHelper.GetDominicanTimeZone() });
         }
         else
         {

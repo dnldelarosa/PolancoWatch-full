@@ -31,24 +31,22 @@ public static class ScheduleHelper
 
     public static DateTimeOffset CalculateNextRun(BackupSchedule schedule, DateTimeOffset fromUtc)
     {
-        if (schedule.UseCron && !string.IsNullOrEmpty(schedule.CronExpression))
+        try 
         {
-            try 
-            {
-                var cron = CronExpression.Parse(schedule.CronExpression);
-                var drTimeZone = GetDominicanTimeZone();
+            var cronString = GetCronFromSchedule(schedule);
+            var cron = CronExpression.Parse(cronString);
+            var drTimeZone = GetDominicanTimeZone();
 
-                var nextOffset = cron.GetNextOccurrence(fromUtc, drTimeZone);
-                
-                if (nextOffset.HasValue)
-                {
-                    return nextOffset.Value;
-                }
-            }
-            catch
+            var nextOffset = cron.GetNextOccurrence(fromUtc, drTimeZone);
+            
+            if (nextOffset.HasValue)
             {
-                // Fallback to interval
+                return nextOffset.Value;
             }
+        }
+        catch
+        {
+            // Fallback
         }
         
         return fromUtc.AddMinutes(schedule.IntervalMinutes > 0 ? schedule.IntervalMinutes : 1440);
