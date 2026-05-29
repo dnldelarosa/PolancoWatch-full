@@ -20,7 +20,8 @@ import {
   X,
   History as LucideHistory,
   Play,
-  Activity
+  Activity,
+  Copy
 } from 'lucide-react';
 import { backupService, type BackupSchedule } from '../services/api';
 import { backupSignalRService } from '../services/backupSignalR';
@@ -554,6 +555,40 @@ const Backups = () => {
 
     setIsEditingSchedule(true);
     setEditingScheduleId(s.id);
+    setIsScheduleModalOpen(true);
+  };
+
+  const handleCopySchedule = (s: BackupSchedule) => {
+    setNewSchedName(s.name + " (Copy)");
+    setNewSchedType(s.type);
+    const targetParts = (s.target || "").split("::");
+    setNewSchedTarget(targetParts[0]);
+    setNewSchedDbName(targetParts.length > 1 ? targetParts[1] : "");
+    setNewSchedDbUser(targetParts.length > 2 ? targetParts[2] : "root");
+    setNewSchedDbPass(targetParts.length > 3 ? targetParts[3] : "");
+    setNewSchedInterval(s.intervalMinutes);
+    setNewSchedStorage(!s.syncToCloud ? 'local' : s.keepLocal ? 'both' : 'drive');
+    setNewSchedCloudFolderId(s.cloudFolderId || "");
+    setNewSchedRetention(s.retentionCount || 0);
+    setNewSchedSendTelegram(s.sendTelegram || false);
+    
+    if (s.useCron && s.cronExpression) {
+       setSchedStrategy('calendar');
+       const parts = s.cronExpression.split(' ');
+       setScheduledTime(`${parts[1].padStart(2, '0')}:${parts[0].padStart(2, '0')}`);
+       if (parts[4] === '*') {
+          setCalendarFreq('daily');
+          setSelectedDays([]);
+       } else {
+          setCalendarFreq('weekly');
+          setSelectedDays(parts[4].split(',').map(Number));
+       }
+    } else {
+       setSchedStrategy('interval');
+    }
+
+    setIsEditingSchedule(false);
+    setEditingScheduleId(null);
     setIsScheduleModalOpen(true);
   };
 
@@ -1180,6 +1215,13 @@ const Backups = () => {
                                  {runningProtocols[s.id] ? <Loader2 size={14} className="animate-spin text-brand-primary" /> : <Play size={14} />}
                                </button>
                                <button 
+                                 onClick={() => handleCopySchedule(s)}
+                                 className="p-2.5 bg-white/5 text-slate-400 hover:text-white rounded-xl transition-colors"
+                                 title="Copy Protocol"
+                               >
+                                 <Copy size={14} />
+                               </button>
+                               <button 
                                  onClick={() => handleEditSchedule(s)}
                                  className="p-2.5 bg-white/5 text-slate-400 hover:text-brand-primary rounded-xl transition-colors"
                                  title="Edit Protocol"
@@ -1268,6 +1310,7 @@ const Backups = () => {
                         <div className="flex justify-end gap-2 pt-3 border-t border-white/5 mt-2">
                             <button onClick={() => handleToggleTelegramAsync(s)} className={`p-2.5 rounded-xl transition-colors ${s.sendTelegram ? 'bg-sky-500/10 text-sky-400' : 'bg-white/5 text-slate-500'}`}><MessageCircle size={14} /></button>
                             <button onClick={() => handleRunSchedule(s.id, s.name)} disabled={runningProtocols[s.id]} className="p-2.5 bg-white/5 text-slate-400 rounded-xl disabled:opacity-50">{runningProtocols[s.id] ? <Loader2 size={14} className="animate-spin text-brand-primary" /> : <Play size={14} />}</button>
+                            <button onClick={() => handleCopySchedule(s)} className="p-2.5 bg-white/5 text-slate-400 hover:text-white rounded-xl"><Copy size={14} /></button>
                             <button onClick={() => handleEditSchedule(s)} className="p-2.5 bg-white/5 text-slate-400 hover:text-brand-primary rounded-xl"><Settings size={14} /></button>
                             <button onClick={() => confirmDeleteSchedule(s.id)} className="p-2.5 bg-rose-500/5 text-rose-400 hover:bg-rose-500/10 rounded-xl"><Trash2 size={14} /></button>
                         </div>

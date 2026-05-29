@@ -34,7 +34,8 @@ public class MetricPersistenceHostedService : BackgroundService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Initial metric save failed.");
+            Console.WriteLine("REAL ERROR in SaveMetricSnapshot: " + ex.ToString());
+            try { _logger.LogError(ex, "Initial metric save failed."); } catch { }
         }
 
         while (await timer.WaitForNextTickAsync(stoppingToken))
@@ -46,7 +47,8 @@ public class MetricPersistenceHostedService : BackgroundService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in Metric Persistence Service.");
+                Console.WriteLine("REAL ERROR in loop: " + ex.ToString());
+                try { _logger.LogError(ex, "Error in Metric Persistence Service."); } catch { }
             }
         }
     }
